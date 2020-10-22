@@ -1,0 +1,37 @@
+{
+  "settings": {
+    "index": {
+      "number_of_shards": 2,
+      "number_of_replicas": 1
+    }
+  },
+  "mappings": {
+    "_doc": {
+      "properties": {
+        "model_id": {
+          "type": "keyword",
+          "index": true
+        },
+        "user_id": {
+          "type": "keyword"
+        },
+        "model": {
+          "type": "text"
+        },
+        "action": {
+          "type": "text"
+        },
+        "context": {
+          "type": "text"
+        },
+        "username": {
+          "type": "text"
+        },
+        "occurred_on": {
+          "type": "date",
+          "format": "yyyy-MM-dd HH:mm:ss"
+        }
+      }
+    }
+  }
+}

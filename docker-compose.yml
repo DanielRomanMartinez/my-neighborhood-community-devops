@@ -1,0 +1,117 @@
+version: '3'
+
+services:
+  nginx:
+    container_name: neighborhood.nginx
+    image: nginx:1.15-alpine
+    ports:
+      - "443:443"
+    networks:
+      default:
+        aliases:
+          - local-api.my-neighborhood-community.com
+    volumes:
+      - "../api:/app/api:cached"
+      - "./nginx/vhosts/local-api.neighborhood-contracts.com.conf:/etc/nginx/conf.d/local-api.neighborhood-contracts.com.conf"
+      - "./nginx/ssl:/etc/nginx/ssl:cached"
+
+  api:
+    container_name: neighborhood.api
+    build:
+      context: ./php
+      dockerfile: Dockerfile
+    volumes:
+      - "../neighborhood-contracts-api:/app/api:cached"
+    environment:
+      - PHP_IDE_CONFIG=serverName=neighborhood-api-php
+      - XDEBUG_CONFIG=remote_host=${IP_ADDRESS} remote_port=9030
+
+  database:
+    container_name: neighborhood.database
+    image: mariadb:10.4
+    restart: always
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+    volumes:
+      - "./database/my.cnf:/etc/mysql/conf.d/my.cnf"
+  
+  redis:
+    container_name: neighborhood.redis
+    image: redis:5
+    ports:
+      - 6379:6379
+
+  redis-commander:
+    container_name: neighborhood.redis-commander
+    image: rediscommander/redis-commander:latest
+    restart: always
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - 8081:8081
+
+  rabbitmq:
+    container_name: neighborhood.rabbitmq
+    image: rabbitmq:3-management
+    build:
+      context: ./rabbitmq
+      dockerfile: Dockerfile
+    environment:
+      RABBITMQ_ERLANG_COOKIE: "SWQOKODSQALRPCLNMEQG"
+    volumes:
+      - './rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf'
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    depends_on:
+      - nginx
+
+  adminer:
+    container_name: neighborhood.adminer
+    image: adminer
+    restart: always
+    ports:
+      - 8088:8080
+
+  elasticsearch:
+    container_name: neighborhood.elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:6.8.0
+    environment:
+      - discovery.type=single-node
+      - cluster.name=neighborhood-cluster
+      - bootstrap.memory_lock=true
+      - http.cors.enabled=true
+      - http.cors.allow-credentials=true
+      - http.cors.allow-origin=/https?:\/\/(localhost)?(127.0.0.1)?(:[0-9]+)?/
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+      - "9300:9300" # tcp
+
+  logstash:
+    container_name: neighborhood.logstash
+    image: docker.elastic.co/logstash/logstash:7.6.0
+    volumes:
+      - ./elk/logstash/logstash.conf:/usr/share/logstash/config/logstash.conf
+    command: logstash -f /usr/share/logstash/config/logstash.conf
+
+  kibana:
+    container_name: neighborhood.kibana
+    image: docker.elastic.co/kibana/kibana:6.8.0
+    environment:
+      SERVER_NAME: local-kibana.neighborhood.com
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+
+networks:
+  default:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 1400
