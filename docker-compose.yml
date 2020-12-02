@@ -5,14 +5,14 @@ services:
     container_name: neighborhood.nginx
     image: nginx:1.15-alpine
     ports:
-      - "443:443"
+      - "80:80"
     networks:
       default:
         aliases:
           - local-api.my-neighborhood-community.com
     volumes:
       - "../api:/app/api:cached"
-      - "./nginx/vhosts/local-api.neighborhood-contracts.com.conf:/etc/nginx/conf.d/local-api.neighborhood-contracts.com.conf"
+      - "./nginx/vhosts/local-api.my-neighborhood-community.com.conf:/etc/nginx/conf.d/local-api.my-neighborhood-community.com.conf"
       - "./nginx/ssl:/etc/nginx/ssl:cached"
 
   api:
@@ -21,7 +21,7 @@ services:
       context: ./php
       dockerfile: Dockerfile
     volumes:
-      - "../neighborhood-contracts-api:/app/api:cached"
+      - "../api:/app/api:cached"
     environment:
       - PHP_IDE_CONFIG=serverName=neighborhood-api-php
       - XDEBUG_CONFIG=remote_host=${IP_ADDRESS} remote_port=9030
